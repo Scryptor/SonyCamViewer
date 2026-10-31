@@ -66,8 +66,9 @@ struct WaitingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            // ход дела: сопряжение — что с камерой сейчас, иначе — когда следующая попытка
-            if let progress = controller.isPairing ? controller.wifiStatus : (kind == .searching ? controller.connectionMessage : nil) {
+            // ход дела: сопряжение — что с камерой сейчас; нажали «Подключить» — как идёт; иначе — когда следующая попытка
+            if let progress = controller.isPairing ? controller.wifiStatus
+                : controller.statusMessage ?? (kind == .searching ? controller.connectionMessage : nil) {
                 Text(progress).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
             if controller.isPairing {
@@ -96,8 +97,16 @@ struct WaitingView: View {
         let cable = kind == .searching && controller.cableAccessHint
         // во время сопряжения сообщение — ход дела, оно в рамке; без сопряжения — что мешает подключиться
         let problem = controller.isPairing ? nil : controller.wifiStatus
-        if cable || problem != nil {
+        let network = controller.localNetworkDenied
+        if cable || problem != nil || network {
             VStack(alignment: .leading, spacing: 14) {
+                if network {
+                    notice("macOS не даёт программе доступ к локальной сети — по Wi-Fi камеру не достать",
+                           "Системные настройки → Конфиденциальность и безопасность → Локальная сеть → включите "
+                           + "Sony Cam Viewer. После установки или обновления программы macOS может выключить его снова.")
+                    Button("Открыть настройки") { NSWorkspace.shared.open(Self.localNetworkSettings) }
+                        .padding(.leading, 26)
+                }
                 if cable {
                     notice("Камера на кабеле видна, но macOS пока не даёт программе доступ к ней",
                            "Нажмите «Разрешить» в окне про доступ к файлам на съёмном томе — после установки или обновления "
@@ -109,6 +118,9 @@ struct WaitingView: View {
             .frame(maxWidth: 640, alignment: .leading)
         }
     }
+
+    private static let localNetworkSettings =
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork")!
 
     private func notice(_ title: String, _ detail: String?) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {

@@ -2,7 +2,7 @@ import SwiftUI
 import ZVCore
 
 /// Список камер: текущая, видимые, знакомые. Строка — имя, как подключена, состояние и что можно сделать:
-/// «Подключить», «Сопрячь». Правый клик — переименовать (прямо в строке) или забыть. Пока список на экране, камеры
+/// «Подключить», «Сопрячь»; крестик — забыть. Правый клик — переименовать (прямо в строке) или забыть. Пока список на экране, камеры
 /// ищутся в сети раз в 10 с.
 struct CameraList: View {
     let controller: CameraController
@@ -67,7 +67,14 @@ struct CameraList: View {
             case .makeMain?:
                 Button("Сделать главной") { controller.selectCamera(entry.id) }
             case nil:
-                EmptyView()
+                if entry.connecting, entry.state != .current { ProgressView().controlSize(.small) }
+            }
+            if forgettable(entry) {
+                Button { controller.forgetCamera(entry.id) } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Забыть камеру — убрать из списка")
             }
         }
         .contentShape(Rectangle())
@@ -80,11 +87,16 @@ struct CameraList: View {
                         .help("Держать на связи рядом с главной — плиткой слева")
                 }
                 Button("Переименовать…") { startRename(entry) }
-                if entry.state != .current, entry.state != .side {
+                if forgettable(entry) {
                     Button("Забыть", role: .destructive) { controller.forgetCamera(entry.id) }
                 }
             }
         }
+    }
+
+    /// Текущую и камеру ленты не забывают: сначала её отключают или убирают из ленты.
+    private func forgettable(_ entry: CameraEntry) -> Bool {
+        entry.knownID != nil && entry.state != .current && entry.state != .side
     }
 
     private func startRename(_ entry: CameraEntry) {

@@ -59,6 +59,8 @@ public enum TransportError: Error, Equatable {
     case disconnected
     case timeout(operation: UInt16)
     case failed(String)
+    /// macOS не даёт программе доступ к локальной сети (Конфиденциальность → Локальная сеть).
+    case localNetworkDenied
 }
 
 public enum SessionError: Error, Equatable {

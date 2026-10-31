@@ -147,6 +147,11 @@ private func usb(_ key: String, serial: String? = nil) -> CameraSighting {
     #expect(later.map(\.stateLabel) == ["подключаю…", "не видна в сети", "не подключена"])
     #expect(later[1].endpoint == CameraEndpoint(host: "127.0.0.1", port: 15741))
     #expect(later[1].action.map(String.init(describing:)) == "connect")
+    // нажали «Подключить» — строка говорит, что идёт попытка, кнопки нет
+    var chosen = later[1]
+    chosen.connecting = true
+    #expect(chosen.stateLabel == "подключаю…")
+    #expect(chosen.action == nil)
     // с ней идёт сопряжение — так и написано, кнопки нет
     var pairing = entries[3]
     pairing.pairing = true

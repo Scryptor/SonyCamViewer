@@ -658,6 +658,7 @@ final class AutomationServer {
                  "zebra": overlay.zebraShare, "peaking": overlay.peakingShare]
             } ?? NSNull(),
             "cableAccessHint": controller.cableAccessHint,
+            "localNetworkDenied": controller.localNetworkDenied,
             "histogramStats": controller.histogramStats.map { stats -> [String: Any] in
                 ["shadows": stats.shadows, "midtones": stats.midtones, "highlights": stats.highlights,
                  "clippedShadows": stats.clippedShadows, "clippedHighlights": stats.clippedHighlights, "mean": stats.mean]

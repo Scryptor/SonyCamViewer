@@ -296,6 +296,8 @@ final class CameraController {
     private(set) var isPairing = false
     /// Что сейчас с Wi-Fi: «ищу камеру», «камера найдена, нужно сопряжение» и т.п.
     private(set) var wifiStatus: String?
+    /// Последняя попытка по Wi-Fi упёрлась в запрет macOS на локальную сеть.
+    private(set) var localNetworkDenied = false
     /// Камера на кабеле видна на шине USB, а macOS её программе не отдаёт — ждёт «Разрешить» в окне доступа.
     private(set) var cableAccessHint = false
     /// Знакомые камеры (имена, где были в сети, сопряжение) и к какой подключались последней — в настройках.
@@ -1325,6 +1327,10 @@ final class CameraController {
             .map { entry in
                 var entry = entry
                 entry.pairing = isPairing && pairingTarget != nil && entry.endpoint == pairingTarget && entry.state != .current
+                // «Подключить» нажали — строка говорит, что идёт, пока попытка не кончится
+                if !isPairing, case let .wifi(endpoint)? = choosing, entry.endpoint == endpoint, entry.state != .current {
+                    entry.connecting = true
+                }
                 return entry
             }
     }
@@ -1389,7 +1395,8 @@ final class CameraController {
             if result != .connected, !pairing {
                 // не ответила — дальше как обычно: кабель, последняя камера по Wi-Fi
                 self.choosing = nil
-                self.showStatus("«\(name)» не отвечает")
+                self.showStatus(self.localNetworkDenied ? "macOS не даёт программе доступ к локальной сети"
+                                                        : "«\(name)» не отвечает")
                 self.connectAttachedIfAny()
             }
         }
@@ -1848,6 +1855,7 @@ final class CameraController {
             // свою память о камере — пишем и её
             Prefs.wifiHost = host.host
             Prefs.wifiCameraName = name
+            localNetworkDenied = false
             note(String(format: "подключился к \(host) (\(name)) за %.0f мс", Date().timeIntervalSince(started) * 1000))
             // пока ждали, связь стала не нужна: подключили кабель, выключили Wi-Fi, отменили сопряжение
             guard wifiAttemptWanted, pairing == isPairing else {
@@ -1878,6 +1886,7 @@ final class CameraController {
         } catch PTPIPError.rejected(let reason) where !pairing && !WiFiPolicy.forgetsPairing(initFailReason: reason) {
             // камера занята (например, ещё держит прошлое подключение) — сопряжение не трогаем, повторим
             await transport.close()
+            localNetworkDenied = false
             guard wifiAttemptWanted else { return .dropped }
             note("\(host): камера отказала (Init Fail \(reason)) — занята, повторю")
             if reconnectingSince == nil {
@@ -1887,6 +1896,7 @@ final class CameraController {
             return .failed
         } catch PTPIPError.rejected(let reason) {
             await transport.close()
+            localNetworkDenied = false
             note("\(host): камера отказала (Init Fail \(reason))\(pairing ? "" : " — программа с ней не сопряжена")")
             guard wifiAttemptWanted else { return .dropped }
             if pairing {
@@ -1902,6 +1912,7 @@ final class CameraController {
         } catch {
             await transport.close()
             note("\(host): не подключилось — \(Self.describe(error))")
+            localNetworkDenied = error as? TransportError == .localNetworkDenied
             // отменили или стало не нужно — это не неудача
             guard wifiAttemptWanted, pairing == isPairing else { return .dropped }
             if reconnectingSince == nil {
@@ -2446,6 +2457,7 @@ final class CameraController {
         case TransportError.timeout: return "нет ответа"
         case TransportError.disconnected: return "соединение закрыто"
         case let TransportError.failed(text): return text
+        case TransportError.localNetworkDenied: return "macOS не даёт доступ к локальной сети"
         default: return "\(error)"
         }
     }

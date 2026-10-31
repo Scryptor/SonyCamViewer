@@ -157,7 +157,7 @@ public struct CameraEntry: Equatable, Sendable, Identifiable {
     public var lastEndpoint: CameraEndpoint?
     public var state: State
     public var paired: Bool
-    /// Текущая: сеанс ещё не готов.
+    /// Текущая: сеанс ещё не готов; другая — к ней идёт попытка подключиться («Подключить» в списке).
     public var connecting = false
     /// С ней сейчас идёт сопряжение («Сопрячь» в списке).
     public var pairing = false
@@ -176,6 +176,7 @@ public struct CameraEntry: Equatable, Sendable, Identifiable {
 
     public var stateLabel: String {
         if pairing { return "сопрягаю…" }
+        if connecting { return "подключаю…" }
         switch state {
         case .current: return connecting ? "подключаю…" : "на связи"
         case .side: return stripConnected ? "в ленте" : "в ленте · нет связи"
@@ -186,7 +187,7 @@ public struct CameraEntry: Equatable, Sendable, Identifiable {
     }
 
     public var action: Action? {
-        if pairing { return nil }
+        if pairing || connecting { return nil }
         switch state {
         case .current: return nil
         case .side: return stripConnected ? .makeMain : .connect

@@ -87,9 +87,14 @@ final class PTPIPChannel: @unchecked Sendable {
                         self?.receive()
                     }
                 case .waiting:
-                    // путь к камере временно недоступен (macOS переспрашивает доступ к локальной сети,
-                    // Wi-Fi переподключается): соединение само вернётся в ready или завершится ошибкой —
-                    // до подключения ждём до тайм-аута, после — просто ждём
+                    // доступ к локальной сети запрещён — ждать нечего: соединение не пойдёт, пока его не разрешат
+                    if self?.connection.currentPath?.unsatisfiedReason == .localNetworkDenied, once.claim() {
+                        self?.connection.cancel()
+                        done.resume(throwing: TransportError.localNetworkDenied)
+                        return
+                    }
+                    // путь к камере временно недоступен (Wi-Fi переподключается): соединение само вернётся в ready
+                    // или завершится ошибкой — до подключения ждём до тайм-аута, после — просто ждём
                     break
                 case .failed(let error):
                     if once.claim() { done.resume(throwing: TransportError.failed("\(error)")) }

@@ -142,7 +142,7 @@ public actor CameraSession {
     /// Связи с камерой нет или камера не отвечает: пробовать то же или другое дальше бессмысленно.
     private static func cameraIsGone(_ error: any Error) -> Bool {
         switch error as? TransportError {
-        case .disconnected?, .timeout?: return true
+        case .disconnected?, .timeout?, .localNetworkDenied?: return true
         case .failed?, nil: return false
         }
     }
