@@ -12,8 +12,8 @@ android {
         applicationId = "local.zve10viewer"
         minSdk = 29
         targetSdk = 34
-        versionCode = 27
-        versionName = "0.9.1"
+        versionCode = 28
+        versionName = "0.9.2"
     }
 
     buildTypes {
